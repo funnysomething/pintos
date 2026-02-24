@@ -24,6 +24,22 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
+/** Queue of threads that are sleeping */
+static struct list sleep_queue;
+
+// Helpers for using list structure
+struct sleeping_thread {
+  int64_t wakeup_time;
+  struct thread *t;
+  struct list_elem elem;
+};
+static bool thread_less (const struct list_elem *a, const struct list_elem *b, void *aux) {
+  struct sleeping_thread *ia = list_entry (a, struct sleeping_thread, elem);
+  struct sleeping_thread *ib = list_entry (a, struct sleeping_thread, elem);
+  return ia->wakeup_time < ib->wakeup_time;
+}
+
+
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -36,6 +52,7 @@ void
 timer_init (void) 
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
+  list_init(&sleep_queue);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
 
@@ -89,9 +106,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  struct thread *curr_thread;
+  struct sleeping_thread *queue_item;
+
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
+
+  // TODO: push to sleep queue
+  curr_thread = thread_current();
+
   while (timer_elapsed (start) < ticks) 
     thread_yield ();
 }
@@ -171,6 +195,9 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+
+
+
   thread_tick ();
 }
 

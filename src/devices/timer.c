@@ -27,10 +27,22 @@ static unsigned loops_per_tick;
 /** Queue of threads that are sleeping */
 static struct list sleep_queue;
 
+// // Helper struct and function for using list structure as queue
+// struct sleep_lock {
+//   uint64_t wakeup_time;
+//   struct lock lock;
+//   struct list_elem elem;
+// };
+// static bool sleep_lock_less(const struct list_elem *a, const struct list_elem *b, void *aux) {
+//   struct thread *ia = list_entry (a, struct sleep_lock, elem);
+//   struct thread *ib = list_entry (b, struct sleep_lock, elem);
+//   return ia->wakeup_time < ib->wakeup_time;
+// }
+
 // Helper function for using list structure as queue
 static bool thread_less (const struct list_elem *a, const struct list_elem *b, void *aux) {
-  struct thread *ia = list_entry (a, struct thread, elem);
-  struct thread *ib = list_entry (b, struct thread, elem);
+  struct thread *ia = list_entry (a, struct thread, sleepelem);
+  struct thread *ib = list_entry (b, struct thread, sleepelem);
   return ia->wakeup_time < ib->wakeup_time;
 }
 
@@ -101,20 +113,22 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  struct thread *curr_thread;
-
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  
-  // TODO: use synch.h
-  enum intr_level old_level = intr_disable();
-  curr_thread = thread_current();
+
+  enum intr_level old_level = intr_disable(); // Disable interrupts
+
+  // TODO: MAKE THIS USE SYNCH.H instead of handling concurrency control myself
+
+  // Add current thread to sleep queue
+  struct thread *curr_thread = thread_current();
   curr_thread->wakeup_time = start + ticks;
   list_insert_ordered(&sleep_queue, &curr_thread->sleepelem, thread_less, NULL);
-  printf("Inserted a thread");
-  thread_block();
-  intr_set_level(old_level);
+  
+  thread_block(); // Block current thread
+
+  intr_set_level(old_level);  // Reenable interrupts
 
   // while (timer_elapsed (start) < ticks) 
   //   thread_yield ();
@@ -196,6 +210,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
 
+  enum intr_level old_level = intr_disable(); // Disable interrupts
+
   /* Wake up sleeping threads that need it */
   while (!list_empty(&sleep_queue)) {
     struct list_elem *e = list_front(&sleep_queue);
@@ -205,6 +221,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
     list_pop_front(&sleep_queue);
     thread_unblock(t);
   }
+
+  intr_set_level(old_level);  // Reenable interrupts
 
   thread_tick ();
 }

@@ -27,15 +27,10 @@ static unsigned loops_per_tick;
 /** Queue of threads that are sleeping */
 static struct list sleep_queue;
 
-// Helpers for using list structure
-struct sleeping_thread {
-  int64_t wakeup_time;
-  struct thread *t;
-  struct list_elem elem;
-};
+// Helper function for using list structure as queue
 static bool thread_less (const struct list_elem *a, const struct list_elem *b, void *aux) {
-  struct sleeping_thread *ia = list_entry (a, struct sleeping_thread, elem);
-  struct sleeping_thread *ib = list_entry (a, struct sleeping_thread, elem);
+  struct thread *ia = list_entry (a, struct thread, elem);
+  struct thread *ib = list_entry (b, struct thread, elem);
   return ia->wakeup_time < ib->wakeup_time;
 }
 
@@ -107,17 +102,22 @@ void
 timer_sleep (int64_t ticks) 
 {
   struct thread *curr_thread;
-  struct sleeping_thread *queue_item;
 
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-
-  // TODO: push to sleep queue
+  
+  // TODO: use synch.h
+  enum intr_level old_level = intr_disable();
   curr_thread = thread_current();
+  curr_thread->wakeup_time = start + ticks;
+  list_insert_ordered(&sleep_queue, &curr_thread->sleepelem, thread_less, NULL);
+  printf("Inserted a thread");
+  thread_block();
+  intr_set_level(old_level);
 
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
 }
 
 /** Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -196,7 +196,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
 
-
+  /* Wake up sleeping threads that need it */
+  while (!list_empty(&sleep_queue)) {
+    struct list_elem *e = list_front(&sleep_queue);
+    struct thread *t = list_entry(e, struct thread, sleepelem);
+    if (t->wakeup_time > ticks) 
+      break;
+    list_pop_front(&sleep_queue);
+    thread_unblock(t);
+  }
 
   thread_tick ();
 }

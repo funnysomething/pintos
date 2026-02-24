@@ -77,6 +77,10 @@ int
 pintos_init (void)
 {
   char **argv;
+  int exit = 0;
+  uint8_t last_char = 0;
+  char line[64];
+  int input_length = 0;
 
   /* Clear BSS. */  
   bss_init ();
@@ -134,6 +138,30 @@ pintos_init (void)
     run_actions (argv);
   } else {
     // TODO: no command line passed to kernel. Run interactively 
+    while (!exit) {
+
+      printf("ENEE447> ");
+      last_char = input_getc();
+      while (last_char != '\n' && last_char != '\r') {
+        printf("%c", last_char);
+        line[input_length++] = last_char;
+        last_char = input_getc();
+      }
+      puts("");
+
+      line[input_length] = '\0'; // Mark end of string
+
+      if (!strcmp(line, "whoami")) {
+        puts("Adi: 119629796, Chris: idk ur id");
+      } else if (!strcmp(line, "exit")) {
+        puts("exiting...");
+        exit = 1;
+      } else {
+        puts("invalid command");
+      }
+
+      input_length = 0;
+    }
   }
 
   /* Finish up. */

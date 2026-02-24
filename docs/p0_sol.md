@@ -42,29 +42,55 @@ At (loader.S:163) after successfully loading all kernel sectors into memory.
 > B7: At the entry of pintos_init(), what is the value of expression
 > `init_page_dir[pd_no(ptov(0))]` in hexadecimal format?
 
+0x0
+
 > B8: When `palloc_get_page()` is called for the first time,
 
 >> B8.1 what does the call stack look like?
 
+#0  palloc_get_page (flags=(PAL_ASSERT | PAL_ZERO)) at ../../threads/palloc.c:113
+#1  0xc00203aa in paging_init () at ../../threads/init.c:168
+#2  0xc002031b in pintos_init () at ../../threads/init.c:100
+#3  0xc002013d in start () at ../../threads/start.S:180
+
 >> B8.2 what is the return value in hexadecimal format?
+
+0xc0101000
 
 >> B8.3 what is the value of expression `init_page_dir[pd_no(ptov(0))]` in
 >> hexadecimal format?
+
+0x0
 
 > B9: When palloc_get_page() is called for the third time,
 
 >> B9.1 what does the call stack look like?
 
+#0  palloc_get_page (flags=PAL_ZERO) at ../../threads/palloc.c:113
+#1  0xc0020a81 in thread_create (name=0xc002e895 "idle", priority=0, function=0xc0020eb0 <idle>,
+ aux=0xc000efbc) at ../../threads/thread.c:178
+#2  0xc0020976 in thread_start () at ../../threads/thread.c:111
+#3  0xc0020334 in pintos_init () at ../../threads/init.c:119
+#4  0xc002013d in start () at ../../threads/start.S:180
+
 >> B9.2 what is the return value in hexadecimal format?
+
+0xc0103000
 
 >> B9.3 what is the value of expression `init_page_dir[pd_no(ptov(0))]` in
 >> hexadecimal format?
+
+0x102027
 
 ## Kernel Monitor
 
 > C1: Put the screenshot of your kernel monitor running example here. (It should
 > show how your kernel shell respond to `whoami`, `exit`, and `other input`.)
 
+![alt text](./images/p0_kernel_monitor.png)
+
 #### 
 
 > C2: Explain how you read and write to the console for the kernel monitor.
+
+Reading is done through the input_getc function, which reads characteres from the user's input buffer. These are read into a character buffer until the user presses enter, at which point the inputted string is compared against the known commands (whoami and exit). If either of these match, then their corresponding action is taken. Otherwise, "invalid command" is outputted.

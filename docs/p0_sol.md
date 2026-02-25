@@ -14,27 +14,33 @@ Christopher Cho <ccho920@umd.edu> Adithya Satheesh <adisat@umd.edu>
 
 #### QUESTIONS: BIOS
 
-> B1: What is the first instruction that gets executed? 
+> B1: What is the first instruction that gets executed?
+
 ljmp $0x3630,$0xf000e05b
 
-> B2: At which physical address is this instruction located? 
+> B2: At which physical address is this instruction located?
+
 0xFFFF0
 
 #### QUESTIONS: BOOTLOADER
 
 > B3: How does the bootloader read disk sectors? In particular, what BIOS
 > interrupt is used?
+
 The BIOS interrupt the *int $0x13* instructions is used (loader.S:242) and reads disk sectors with the *mov $0x42, %ah* instruction (loader.S:240)
 
 > B4: How does the bootloader decides whether it successfully finds the Pintos
 > kernel?
+
 The bootloader checks seaches partition entries in the partition tables and checks if the partition is not empty (loader.S:74), the partition type is 0x20 (loader.S:81), and the bootable flag is set (loader.S:85).
 
 > B5: What happens when the bootloader could not find the Pintos kernel?
+
 Prints an error message (loader.S:103) and notifies the BIOS of boot failure (loader.S:107).
 
 > B6: At what point and how exactly does the bootloader transfer control to the
 > Pintos kernel?
+
 At (loader.S:163) after successfully loading all kernel sectors into memory.
 
 #### QUESTIONS: KERNEL

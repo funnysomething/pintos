@@ -152,7 +152,7 @@ pintos_init (void)
       line[input_length] = '\0'; // Mark end of string
 
       if (!strcmp(line, "whoami")) {
-        puts("Adi: 119629796, Chris: idk ur id");
+        puts("Adi: 119629796, Chris: 119832868");
       } else if (!strcmp(line, "exit")) {
         puts("exiting...");
         exit = 1;

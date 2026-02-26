@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 /** States in a thread's life cycle. */
@@ -80,6 +81,8 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+struct lock;
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -87,14 +90,18 @@ struct thread
     enum thread_status status;          /**< Thread state. */
     char name[16];                      /**< Name (for debugging purposes). */
     uint8_t *stack;                     /**< Saved stack pointer. */
-    int priority;                       /**< Priority. */
+    int priority;                       /**< Effective (possibly donated) priority. */
+    int base_priority;                  /**< Original priority before donation. */
+    struct list donors;                 /**< List of threads donating priority to us. */
+    struct list_elem donor_elem;        /**< List element for sitting in a donor list. */
+    struct lock *waiting_on;            /**< Lock this thread is waiting to acquire. */
     struct list_elem allelem;           /**< List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /**< List element. */
 
-    struct list_elem sleepelem;         /**<  List element for sleep queue */
-    int64_t wakeup_time;                /**<  Wakeup time for timer_sleep */
+    struct list_elem sleepelem;         /**< List element for sleep queue. */
+    int64_t wakeup_time;               /**< Wakeup time for timer_sleep. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -128,6 +135,9 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+void thread_check_preempt (void);
+bool thread_priority_greater (const struct list_elem *,
+                              const struct list_elem *, void *);
 
 /** Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);

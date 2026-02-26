@@ -27,20 +27,7 @@ static unsigned loops_per_tick;
 /** Queue of threads that are sleeping */
 static struct list sleep_queue;
 
-// // Helper struct and function for using list structure as queue
-// struct sleep_lock {
-//   uint64_t wakeup_time;
-//   struct lock lock;
-//   struct list_elem elem;
-// };
-// static bool sleep_lock_less(const struct list_elem *a, const struct list_elem *b, void *aux) {
-//   struct thread *ia = list_entry (a, struct sleep_lock, elem);
-//   struct thread *ib = list_entry (b, struct sleep_lock, elem);
-//   return ia->wakeup_time < ib->wakeup_time;
-// }
-
-// Helper function for using list structure as queue
-static bool thread_less (const struct list_elem *a, const struct list_elem *b, void *aux) {
+static bool sleep_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
   struct thread *ia = list_entry (a, struct thread, sleepelem);
   struct thread *ib = list_entry (b, struct thread, sleepelem);
   return ia->wakeup_time < ib->wakeup_time;
@@ -124,7 +111,7 @@ timer_sleep (int64_t ticks)
   // Add current thread to sleep queue
   struct thread *curr_thread = thread_current();
   curr_thread->wakeup_time = start + ticks;
-  list_insert_ordered(&sleep_queue, &curr_thread->sleepelem, thread_less, NULL);
+  list_insert_ordered(&sleep_queue, &curr_thread->sleepelem, sleep_less, NULL);
   
   thread_block(); // Block current thread
 
@@ -222,9 +209,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
     thread_unblock(t);
   }
 
-  intr_set_level(old_level);  // Reenable interrupts
+  intr_set_level(old_level);
 
   thread_tick ();
+  thread_check_preempt ();
 }
 
 /** Returns true if LOOPS iterations waits for more than one timer

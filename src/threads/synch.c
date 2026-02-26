@@ -208,11 +208,13 @@ void
 lock_acquire (struct lock *lock)
 {
   struct thread *cur = thread_current ();
+  enum intr_level old_level;
 
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  old_level = intr_disable ();
   if (lock->holder != NULL)
     {
       cur->waiting_on = lock;
@@ -233,11 +235,14 @@ lock_acquire (struct lock *lock)
       list_insert_ordered (&lock->holder->donors, &cur->donor_elem,
                            thread_priority_greater_donor, NULL);
     }
+  intr_set_level (old_level);
 
   sema_down (&lock->semaphore);
 
+  old_level = intr_disable ();
   cur->waiting_on = NULL;
   lock->holder = cur;
+  intr_set_level (old_level);
 }
 
 /** Tries to acquires LOCK and returns true if successful or false
@@ -266,12 +271,15 @@ lock_try_acquire (struct lock *lock)
    make sense to try to release a lock within an interrupt
    handler. */
 void
-lock_release (struct lock *lock) 
+lock_release (struct lock *lock)
 {
   struct thread *cur = thread_current ();
+  enum intr_level old_level;
 
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+
+  old_level = intr_disable ();
 
   /* Remove all donors that were waiting on this lock. */
   struct list_elem *e = list_begin (&cur->donors);
@@ -296,6 +304,8 @@ lock_release (struct lock *lock)
     }
 
   lock->holder = NULL;
+  intr_set_level (old_level);
+
   sema_up (&lock->semaphore);
 }
 
